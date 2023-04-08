@@ -7,9 +7,9 @@ from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 
 # Current Model
-st.title("My App")
+st.title("Langchain App")
 
-ApiKey = st.text_input('ApiKey', "")
+ApiKey = st.text_input('ApiKey', "", type="password")
 
 # --------------------------------
 UploadedText = ""
@@ -22,7 +22,7 @@ def extract_text(pdf_file):
     text = ""
     for page_num in range(len(pdf_reader.pages)):
         page = pdf_reader.pages[page_num]
-        text += "Page " + str(page_num) + ":\n" + page.extract_text()
+        text += "  \nPage " + str(page_num) + ":  \n" + page.extract_text()
 
     return text
 
@@ -39,8 +39,10 @@ container1 = st.container()
 container2 = st.container()
 container3 = st.container()
 
-# Encapsulate the code for each option in a separate function
+# Encapsulating the code for each option
 def option1():
+    # Attempt at implementing document scanning for gpt (not sucsessfully implemented)
+    # see https://python.langchain.com/en/latest/modules/chains/index_examples/qa_with_sources.html
     st.write('Option 1, ask pdf')
     pdf_file = st.file_uploader("Upload a PDF file", type="pdf")
     if pdf_file is not None:
@@ -51,10 +53,13 @@ def option1():
     if ApiKey is not "":
         if st.button("Ask", type="primary"):
             MyModel = OpenAIChat(model_name='gpt-3.5-turbo', openai_api_key=ApiKey)
-            template = """Answer this question acting as a human tutor, if you do not know the answer, 
+            template = """Try to answer the question about the provided document, if you do not know the answer, 
             say you dont: {Question}. Use this context to answer this question: {MyText}"""
             prompt = PromptTemplate(template=template, input_variables=['MyText', 'Question'])
-            input = {'MyText': UploadedText, 'Question': MyQuestion}
+            input = {
+                'MyText': UploadedText,
+                'Question': MyQuestion
+                     }
 
             chain = LLMChain(llm=MyModel, prompt=prompt)
             st.success(chain(input)['text'])
@@ -63,10 +68,11 @@ def option1():
 
 
 def option2():
-    # Code for option 2
+    # Attempt at implementing "websearch" for gpt,
+    # see https://python.langchain.com/en/latest/modules/chains/examples/llm_requests.html
     st.write('Option 2, ask webpage')
 
-    MyUrl = st.text_input('Webpage to search', "https://github.com/Karsten-Allison")
+    MyUrl = st.text_input('Webpage to search', "https://github.com/Karsten-Allison/CougHacksWack/blob/master/main.py")
 
     if ApiKey is not "":
         if st.button("Ask", type="primary"):
@@ -91,14 +97,16 @@ def option2():
         st.write("no api key")
 
 def option3():
-    # Code for option 3
-    st.write('Option 3, ask')
+    # Attempt at implementing "memory" for langchain (didn't work)
+    # see  https://python.langchain.com/en/latest/modules/memory/examples/adding_memory.html
+    st.write('Option 3, Email Advice')
     if ApiKey is not "":
         if st.button("Ask", type="primary"):
             MyModel = OpenAIChat(model_name='gpt-3.5-turbo', openai_api_key=ApiKey)
 
-            template = """You are a chatbot having a conversation with a human.
-        
+            template = """You are a bot that rewrite's emails to sound more professional.
+                    Take their template email, expand on details and make it professional. You can falsify details that
+                    seem unprofessional. 
                     {chat_history}
                     Human: {Question}
                     Chatbot:"""
@@ -110,7 +118,12 @@ def option3():
             memory = ConversationBufferMemory(memory_key="chat_history")
             chain = LLMChain(llm=MyModel, prompt=prompt, verbose=True, memory=memory)
 
-            st.write(chain.predict(Question = MyQuestion))
+            st.write(chain.predict(Question=MyQuestion))
+
+            Followup = """Give constructive criticism on a few ways I could have improved upon this task.  
+            Give it in a bulleted list, start by saying: "Here's how you could have improved"
+            """
+            st.write(chain.predict(Question=Followup))
     else:
         st.write("no api key")
 
